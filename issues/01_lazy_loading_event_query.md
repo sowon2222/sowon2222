@@ -27,8 +27,8 @@ org.hibernate.LazyInitializationException: could not initialize proxy [com.examp
 
 2. **트랜잭션 범위 문제**
    - Repository 메서드가 트랜잭션 없이 실행되거나, 트랜잭션이 조기에 종료되는 경우
-   - Service 메서드에서 `toResponse()` 변환 시점에 이미 Hibernate 세션이 닫혀있음
-   - `e.getTeam().getName()` 또는 `e.getOwner().getName()` 호출 시 LazyInitializationException 발생
+   - Service 메서드에서 `toResponse()` 변환 시점에 이미 Hibernate 세션이 닫혀있어어
+   - `e.getTeam().getName()` 또는 `e.getOwner().getName()` 호출 시 LazyInitializationException 발생했습니다.
 
 3. **문제 발생 시나리오**
    ```
@@ -60,17 +60,17 @@ private CalendarEventResponse toResponse(CalendarEvent e) {
     CalendarEventResponse r = new CalendarEventResponse();
     r.setId(e.getId());
     r.setTeamId(e.getTeam() != null ? e.getTeam().getId() : null);
-    r.setTeamName(e.getTeam() != null ? e.getTeam().getName() : null);  // ❌ 여기서 LazyInitializationException 발생
+    r.setTeamName(e.getTeam() != null ? e.getTeam().getName() : null);  //  여기서 LazyInitializationException 발생
     r.setOwnerId(e.getOwner() != null ? e.getOwner().getId() : null);
-    r.setOwnerName(e.getOwner() != null ? e.getOwner().getName() : null);  // ❌ 여기서도 발생 가능
+    r.setOwnerName(e.getOwner() != null ? e.getOwner().getName() : null);  //  여기서도 발생 가능
     // ... 나머지 필드 설정
     return r;
 }
 ```
 
 **문제점:**
-- 엔티티를 조회한 후 `toResponse()`에서 연관 객체에 접근
-- 트랜잭션이 종료된 후 Lazy loading 시도로 인한 예외 발생
+- 엔티티를 조회한 후 `toResponse()`에서 연관 객체에 접근합니다.
+- 트랜잭션이 종료된 후 Lazy loading 시도로 인한 예외 발생합니다.
 
 ## 해결 과정: DTO Projection 적용
 
@@ -85,7 +85,7 @@ List<CalendarEvent> findByTeam_Id(@Param("teamId") Long teamId);
 하지만 이 방식은 여전히 엔티티를 거쳐야 하고, 트랜잭션 관리가 복잡해질 수 있습니다.
 
 ### 2단계: DTO Projection 적용 (최종 해결책)
-**핵심 아이디어:** 엔티티를 거치지 않고, JPQL에서 직접 DTO로 조회
+**DTO Projection :** 엔티티를 거치지 않고, JPQL에서 직접 DTO로 조회
 
 ## 변경된 Repository 코드 (DTO 프로젝션 버전)
 
@@ -187,9 +187,9 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
 ```
 
 **핵심 변경사항:**
-- `SELECT new com.example.sbb.dto.response.CalendarEventResponse(...)` 사용
-- 필요한 필드만 직접 조회하여 DTO 생성
-- 엔티티 객체를 생성하지 않음
+- `SELECT new com.example.sbb.dto.response.CalendarEventResponse(...)` 사용하여여
+- 필요한 필드만 직접 조회하여 DTO 생성하고고
+- 엔티티 객체를 생성하지 않습니다.
 
 ## 변경된 Service 코드
 
@@ -212,9 +212,9 @@ public List<CalendarEventResponse> findByTeamAndRange(Long teamId, OffsetDateTim
 ```
 
 **변경사항:**
-- `toResponse()` 변환 로직 제거
-- Repository에서 바로 DTO 반환
-- 코드가 훨씬 간결해짐
+- `toResponse()` 변환 로직 제거했으며,
+- Repository에서 바로 DTO 반환합니다.
+- 코드가 훨씬 간결해졌습니다.
 
 ## DTO Response에 생성자 추가
 
@@ -235,42 +235,39 @@ public class CalendarEventResponse {
 }
 ```
 
-## 왜 이 방식이 더 좋은가?
+## 왜 이 방식이 더 좋은지 ..
 
 ### JOIN FETCH 대비 장점
 
 | 항목 | JOIN FETCH | DTO Projection |
 |------|-----------|----------------|
-| **LazyInitializationException** | 트랜잭션 관리 필요 | ✅ 원천 제거 |
-| **성능** | 엔티티 전체 로드 | ✅ 필요한 필드만 조회 |
-| **메모리 사용** | 엔티티 객체 생성 | ✅ DTO만 생성 |
-| **코드 복잡도** | 엔티티 변환 로직 필요 | ✅ 변환 로직 불필요 |
-| **유지보수성** | 엔티티 구조 변경 시 영향 | ✅ DTO만 수정 |
-| **쿼리 최적화** | N+1 문제 가능성 | ✅ 한 번의 쿼리로 해결 |
+| **LazyInitializationException** | 트랜잭션 관리 필요 | 원천천 제거 |
+| **성능** | 엔티티 전체 로드 | 필요한 필드만 조회 |
+| **메모리 사용** | 엔티티 객체 생성 | DTO만 생성 |
+| **코드 복잡도** | 엔티티 변환 로직 필요 | 변환 로직 불필요 |
+| **유지보수성** | 엔티티 구조 변경 시 영향 | DTO만 수정 |
+| **쿼리 최적화** | N+1 문제 가능성 | 한 번의 쿼리로 해결 |
 
 ### 구체적인 장점
 
-1. **LazyInitializationException 원천 제거**
-   - 엔티티를 거치지 않으므로 Lazy loading이 발생하지 않음
-   - 트랜잭션 범위에 덜 의존적
+1. **LazyInitializationException 원천천 제거**
+   - 엔티티를 거치지 않으므로 Lazy loading이 발생하지 않습니다.
+   - 트랜잭션 범위에 덜 의존적입니다. 
 
 2. **성능 최적화**
-   - 필요한 필드만 조회하여 네트워크 트래픽 감소
-   - 엔티티 객체 생성 오버헤드 제거
-   - 메모리 사용량 감소
+   - 필요한 필드만 조회하여 네트워크 트래픽 감소이 감소합니다.
+   - 엔티티 객체 생성 오버헤드 제거됩니다.
+   - 메모리 사용량도 감소합니다. 
 
 3. **코드 단순화**
-   - `toResponse()` 같은 변환 메서드 불필요
-   - Service 레이어가 더 간결해짐
+   - `toResponse()` 같은 변환 메서드 불필요하며
+   - Service 레이어가 더 간결해집니다. 
 
 4. **유지보수성 향상**
-   - API 레이어가 엔티티 구조에 덜 의존
-   - 엔티티 변경 시 DTO만 수정하면 됨
-   - API 계약이 명확해짐
+   - API 레이어가 엔티티 구조에 덜 의존하며
+   - 엔티티 변경 시 DTO만 수정하면 됩니다. 
+   - API 계약이 명확해집니다.
 
-5. **포트폴리오 어필 포인트**
-   - "DTO Projection으로 성능 + 안정성 챙김" 어필 가능
-   - JPA 고급 기능 활용 능력 증명
 
 ## 재발 방지 전략
 
@@ -281,15 +278,15 @@ public class CalendarEventResponse {
 
 ### 2. 개발 가이드라인
 ```
-✅ 권장: DTO 프로젝션 사용
+권장: DTO 프로젝션 사용
    - 조회 전용 API는 가능한 한 DTO 프로젝션 사용
    - 엔티티를 거치지 않고 바로 DTO로 조회
 
-⚠️ 주의: JOIN FETCH 사용 시
+주의: JOIN FETCH 사용 시
    - @Transactional(readOnly = true) 필수
    - 트랜잭션 범위 내에서만 연관 객체 접근
 
-❌ 금지: Lazy loading에 의존한 조회
+금지: Lazy loading에 의존한 조회
    - 트랜잭션 없이 엔티티 조회 후 연관 객체 접근
 ```
 
@@ -297,13 +294,7 @@ public class CalendarEventResponse {
 - **통합 테스트**: 트랜잭션 없이 조회 API 호출하여 LazyInitializationException 발생 여부 확인
 - **성능 테스트**: 대량 데이터 조회 시 메모리 사용량 및 쿼리 성능 측정
 
-### 4. 모니터링
-- 프로덕션 환경에서 LazyInitializationException 발생 시 알림 설정
-- 조회 API 응답 시간 모니터링
 
-### 5. 문서화
-- 새로운 엔티티 추가 시 DTO 프로젝션 패턴 문서 참조
-- 팀 내 공유 및 온보딩 자료로 활용
 
 ## 참고 자료
 
@@ -314,6 +305,6 @@ public class CalendarEventResponse {
 ---
 
 **작성일**: 2025-11-19  
-**작성자**: 개발팀  
+**작성자**: 진소원
 **관련 이슈**: CalendarEvent 조회 API 500 에러
 
