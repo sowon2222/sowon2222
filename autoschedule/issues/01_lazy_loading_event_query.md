@@ -72,7 +72,7 @@ private CalendarEventResponse toResponse(CalendarEvent e) {
 - 엔티티를 조회한 후 `toResponse()`에서 연관 객체에 접근합니다.
 - 트랜잭션이 종료된 후 Lazy loading 시도로 인한 예외 발생합니다.
 
-## 해결 과정: DTO Projection 적용
+## 해결 과정
 
 ### 1단계: JOIN FETCH 시도 (임시 해결책)
 처음에는 JOIN FETCH를 사용하여 연관 객체를 즉시 로드하는 방식으로 해결을 시도했습니다:
