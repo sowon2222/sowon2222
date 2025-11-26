@@ -1,7 +1,6 @@
 # AutoSchedule - 실시간 협업 스케줄 자동 최적화 시스템
 
-### Repository
-https://github.com/sowon2222/autoschedule
+### Repository https://github.com/sowon2222/autoschedule
 
 ### 프로젝트 소개
 AutoSchedule은 팀 단위의 작업 / 일정 관리와 자동 스케줄링 기능을 제공하는 프로젝트입니다.  
